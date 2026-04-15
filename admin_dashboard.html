@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Kantin — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --cream: #FBF6EE; --cream-dark: #F3EBE0;
+    --orange: #E8834A; --orange-light: #F5C09A; --orange-pale: #FDF0E6;
+    --green: #4A7C5F; --green-light: #A8C5B4; --green-pale: #EDF5F0;
+    --brown: #6B4C3B; --text: #2C1810; --text-mid: #6B4C3B;
+    --text-muted: #9E7E6E; --border: rgba(107,76,59,0.12);
+    --white: #FFFFFF; --red: #C0392B; --red-pale: #FDECEA;
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--text); min-height: 100vh; }
+
+  /* NAV */
+  .nav { position: sticky; top: 0; z-index: 100; background: var(--brown); padding: 0 32px; height: 64px; display: flex; align-items: center; justify-content: space-between; }
+  .nav-brand { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; color: var(--white); letter-spacing: -0.5px; text-decoration: none; }
+  .nav-brand span { color: var(--orange-light); }
+  .nav-badge { font-size: 11px; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.8); border-radius: 100px; padding: 3px 10px; font-weight: 500; margin-left: 8px; }
+  .nav-right { display: flex; align-items: center; gap: 12px; }
+  .admin-name { font-size: 13px; color: rgba(255,255,255,0.6); }
+  .logout-btn { font-size: 13px; color: rgba(255,255,255,0.5); background: none; border: none; cursor: pointer; transition: color 0.2s; font-family: 'DM Sans', sans-serif; }
+  .logout-btn:hover { color: var(--white); }
+
+  /* SIDEBAR LAYOUT */
+  .layout { display: flex; min-height: calc(100vh - 64px); }
+  .sidebar { width: 220px; flex-shrink: 0; background: var(--white); border-right: 1px solid var(--border); padding: 24px 12px; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 64px; height: calc(100vh - 64px); overflow-y: auto; }
+  .sidebar-label { font-size: 11px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; padding: 0 12px; margin: 12px 0 6px; }
+  .sidebar-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; font-size: 14px; color: var(--text-mid); cursor: pointer; transition: all 0.15s; border: none; background: none; font-family: 'DM Sans', sans-serif; width: 100%; text-align: left; }
+  .sidebar-item:hover { background: var(--cream); color: var(--text); }
+  .sidebar-item.active { background: var(--orange-pale); color: var(--orange); font-weight: 500; }
+  .sidebar-item-icon { font-size: 16px; width: 20px; text-align: center; }
+  .sidebar-badge { margin-left: auto; background: var(--orange); color: var(--white); border-radius: 100px; padding: 1px 7px; font-size: 11px; }
+
+  /* MAIN */
+  .main { flex: 1; padding: 32px; overflow-x: hidden; }
+  .page-section { display: none; }
+  .page-section.active { display: block; }
+
+  /* SECTION HEADER */
+  .section-header { margin-bottom: 24px; }
+  .section-title { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 600; letter-spacing: -0.5px; color: var(--text); }
+  .section-sub { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
+
+  /* STATS ROW */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin-bottom: 28px; }
+  .stat-card { background: var(--white); border: 1px solid var(--border); border-radius: 18px; padding: 20px 22px; }
+  .stat-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+  .stat-value { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 600; letter-spacing: -0.5px; color: var(--text); }
+  .stat-value.orange { color: var(--orange); }
+  .stat-value.green { color: var(--green); }
+  .stat-value.red { color: var(--red); }
+
+  /* TABLE */
+  .table-card { background: var(--white); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; }
+  .table-toolbar { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .table-title { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 600; color: var(--text); letter-spacing: -0.3px; }
+  .search-input { padding: 8px 14px; border: 1.5px solid var(--border); border-radius: 100px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); background: var(--cream); outline: none; width: 220px; transition: border-color 0.2s; }
+  .search-input:focus { border-color: var(--orange); background: var(--white); }
+  table { width: 100%; border-collapse: collapse; }
+  th { padding: 12px 20px; text-align: left; font-size: 11px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1px solid var(--border); background: var(--cream); }
+  td { padding: 14px 20px; font-size: 14px; color: var(--text-mid); border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--cream); }
+  .td-name { font-weight: 500; color: var(--text); }
+  .td-muted { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  /* BADGES */
+  .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 500; }
+  .badge-pending { background: #FFF8E6; color: #B8860B; border: 1px solid #F0D080; }
+  .badge-approved { background: var(--green-pale); color: var(--green); border: 1px solid var(--green-light); }
+  .badge-rejected { background: var(--red-pale); color: var(--red); border: 1px solid #f1a9a0; }
+  .badge-student { background: var(--orange-pale); color: var(--orange); border: 1px solid var(--orange-light); }
+  .badge-seller { background: #E8F0FE; color: #1967D2; border: 1px solid #AECBFA; }
+  .badge-admin { background: rgba(107,76,59,0.1); color: var(--brown); border: 1px solid rgba(107,76,59,0.2); }
+
+  /* BUTTONS */
+  .btn { padding: 8px 16px; border-radius: 10px; border: none; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+  .btn-approve { background: var(--green-pale); color: var(--green); border: 1px solid var(--green-light); }
+  .btn-approve:hover { background: var(--green); color: var(--white); }
+  .btn-reject { background: var(--red-pale); color: var(--red); border: 1px solid #f1a9a0; }
+  .btn-reject:hover { background: var(--red); color: var(--white); }
+  .btn-view { background: var(--cream-dark); color: var(--text-mid); }
+  .btn-view:hover { background: var(--cream); }
+  .btn-primary { background: var(--orange); color: var(--white); }
+  .btn-primary:hover { background: #d4723d; }
+  .action-btns { display: flex; gap: 6px; }
+
+  /* EMPTY */
+  .empty-row td { text-align: center; padding: 48px 20px; color: var(--text-muted); font-size: 14px; }
+
+  /* DETAIL MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(44,24,16,0.45); z-index: 500; display: none; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--white); border-radius: 24px; padding: 32px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; animation: modalIn 0.2s ease; }
+  @keyframes modalIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .modal-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; letter-spacing: -0.5px; color: var(--text); margin-bottom: 20px; }
+  .detail-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-key { color: var(--text-muted); font-size: 13px; }
+  .detail-val { color: var(--text); font-weight: 500; text-align: right; max-width: 280px; }
+  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: var(--white); border-radius: 100px; padding: 12px 24px; font-size: 13px; font-weight: 500; transition: transform 0.3s ease; z-index: 999; white-space: nowrap; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ORDERS TABLE extras */
+  .order-items-cell { font-size: 12px; color: var(--text-muted); max-width: 200px; }
+
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .main { padding: 20px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div style="display:flex;align-items:center;">
+    <a class="nav-brand" href="#">Kantin<span>.</span></a>
+    <span class="nav-badge">Admin</span>
+  </div>
+  <div class="nav-right">
+    <span class="admin-name" id="adminName"></span>
+    <button class="logout-btn" onclick="handleLogout()">Sign out →</button>
+  </div>
+</nav>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-label">Overview</div>
+    <button class="sidebar-item active" onclick="switchSection('dashboard', this)">
+      <span class="sidebar-item-icon">📊</span> Dashboard
+    </button>
+
+    <div class="sidebar-label">Management</div>
+    <button class="sidebar-item" onclick="switchSection('sellers', this)">
+      <span class="sidebar-item-icon">🏪</span> Sellers
+      <span class="sidebar-badge" id="pendingBadgeSidebar" style="display:none">0</span>
+    </button>
+    <button class="sidebar-item" onclick="switchSection('students', this)">
+      <span class="sidebar-item-icon">🎓</span> Students
+    </button>
+    <button class="sidebar-item" onclick="switchSection('orders', this)">
+      <span class="sidebar-item-icon">📦</span> All orders
+    </button>
+    <button class="sidebar-item" onclick="switchSection('menu', this)">
+      <span class="sidebar-item-icon">🍽️</span> Menu items
+    </button>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div class="page-section active" id="section-dashboard">
+      <div class="section-header">
+        <div class="section-title">Good <span id="adminTod">day</span>, <span id="adminGreetName">Admin</span> 👋</div>
+        <div class="section-sub">Here's what's happening on campus today.</div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Total students</div>
+          <div class="stat-value" id="statStudents">–</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Active stalls</div>
+          <div class="stat-value green" id="statApproved">–</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pending approval</div>
+          <div class="stat-value orange" id="statPending">–</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Orders today</div>
+          <div class="stat-value" id="statOrdersToday">–</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total menu items</div>
+          <div class="stat-value" id="statMenuItems">–</div>
+        </div>
+      </div>
+
+      <!-- Pending sellers quick view -->
+      <div class="table-card" id="pendingQuickCard">
+        <div class="table-toolbar">
+          <div class="table-title">⏳ Pending seller approvals</div>
+          <button class="btn btn-view" onclick="switchSection('sellers', document.querySelector('.sidebar-item:nth-child(4)'))">View all sellers</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Seller</th>
+              <th>Stall name</th>
+              <th>Submitted</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="pendingQuickBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SELLERS -->
+    <div class="page-section" id="section-sellers">
+      <div class="section-header">
+        <div class="section-title">Sellers</div>
+        <div class="section-sub">Manage stall registrations and approvals.</div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;" id="sellerFilters">
+        <button class="filter-chip active" onclick="setSellerFilter('all', this)">All</button>
+        <button class="filter-chip" onclick="setSellerFilter('pending', this)">⏳ Pending</button>
+        <button class="filter-chip" onclick="setSellerFilter('approved', this)">✅ Approved</button>
+        <button class="filter-chip" onclick="setSellerFilter('rejected', this)">❌ Rejected</button>
+      </div>
+
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-title" id="sellerTableTitle">All sellers</div>
+          <input class="search-input" id="sellerSearch" placeholder="Search sellers..." oninput="renderSellers()"/>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Owner</th>
+              <th>Stall name</th>
+              <th>Hours</th>
+              <th>Delivery</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="sellersBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STUDENTS -->
+    <div class="page-section" id="section-students">
+      <div class="section-header">
+        <div class="section-title">Students</div>
+        <div class="section-sub">All registered student accounts.</div>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-title">Student accounts</div>
+          <input class="search-input" id="studentSearch" placeholder="Search students..." oninput="renderStudents()"/>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Email</th><th>NPM</th><th>Phone</th><th>Joined</th></tr>
+          </thead>
+          <tbody id="studentsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ORDERS -->
+    <div class="page-section" id="section-orders">
+      <div class="section-header">
+        <div class="section-title">All orders</div>
+        <div class="section-sub">Platform-wide order history.</div>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-title">Orders</div>
+          <input class="search-input" id="orderSearch" placeholder="Search orders..." oninput="renderAllOrders()"/>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Order ID</th><th>Student</th><th>Stall</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th>Time</th></tr>
+          </thead>
+          <tbody id="ordersBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- MENU ITEMS -->
+    <div class="page-section" id="section-menu">
+      <div class="section-header">
+        <div class="section-title">Menu items</div>
+        <div class="section-sub">All menu items across all stalls.</div>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-title">All menu items</div>
+          <input class="search-input" id="menuSearch" placeholder="Search items..." oninput="renderMenuItems()"/>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Item</th><th>Stall</th><th>Category</th><th>Price</th><th>Available</th></tr>
+          </thead>
+          <tbody id="menuBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- STALL DETAIL MODAL -->
+<div class="modal-overlay" id="stallModal">
+  <div class="modal">
+    <div class="modal-title" id="modalStallName">Stall details</div>
+    <div id="modalStallBody"></div>
+    <div class="modal-footer" id="modalStallFooter"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<style>
+  .filter-chip { padding: 7px 14px; border-radius: 100px; border: 1.5px solid var(--border); background: var(--white); font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text-mid); cursor: pointer; transition: all 0.2s; }
+  .filter-chip:hover { border-color: var(--orange-light); }
+  .filter-chip.active { background: var(--orange); color: var(--white); border-color: var(--orange); font-weight: 500; }
+</style>
+
+<script>
+  const { createClient } = supabase;
+  const sb = createClient(
+    'https://kalgejckrmlpwwxtitmz.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthbGdlamNrcm1scHd3eHRpdG16Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MjI2NzYsImV4cCI6MjA5MTI5ODY3Nn0.5YQtOtIMciiaMiAyk-b9WM7iIyzHSZEMcs2a1XF5-ho'
+  );
+
+  // ── STATE ──
+  let allSellers = [], allStudents = [], allOrders = [], allMenuItems = [];
+  let sellerFilter = 'all';
+  let currentAdmin = null;
+
+  // ── INIT ──
+  async function init() {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) { window.location.href = 'kantin_auth.html'; return; }
+
+    const { data: profile } = await sb.from('profiles').select('*').eq('id', user.id).single();
+    if (!profile || profile.role !== 'admin') { window.location.href = 'kantin_auth.html'; return; }
+
+    currentAdmin = profile;
+    const name = profile.full_name || 'Admin';
+    document.getElementById('adminName').textContent = name;
+    document.getElementById('adminGreetName').textContent = name.split(' ')[0];
+    const hour = new Date().getHours();
+    document.getElementById('adminTod').textContent = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+
+    await Promise.all([loadSellers(), loadStudents(), loadOrders(), loadMenuItems()]);
+    updateDashboardStats();
+  }
+
+  // ── LOAD DATA ──
+  async function loadSellers() {
+    const { data } = await sb
+      .from('stalls')
+      .select('*, profiles(full_name, phone, id)')
+      .order('created_at', { ascending: false });
+    allSellers = data || [];
+    renderSellers();
+    renderPendingQuick();
+    updatePendingBadge();
+  }
+
+  async function loadStudents() {
+    const { data } = await sb
+      .from('profiles')
+      .select('*')
+      .eq('role', 'student')
+      .order('created_at', { ascending: false });
+    allStudents = data || [];
+    renderStudents();
+  }
+
+  async function loadOrders() {
+    const { data } = await sb
+      .from('orders')
+      .select('*, profiles(full_name), stalls(stall_name), order_items(*)')
+      .order('created_at', { ascending: false })
+      .limit(200);
+    allOrders = data || [];
+    renderAllOrders();
+  }
+
+  async function loadMenuItems() {
+    const { data } = await sb
+      .from('menu_items')
+      .select('*, stalls(stall_name)')
+      .order('created_at', { ascending: false });
+    allMenuItems = data || [];
+    renderMenuItems();
+  }
+
+  // ── DASHBOARD STATS ──
+  function updateDashboardStats() {
+    document.getElementById('statStudents').textContent = allStudents.length;
+    document.getElementById('statApproved').textContent = allSellers.filter(s => s.status === 'approved').length;
+    const pending = allSellers.filter(s => s.status === 'pending').length;
+    document.getElementById('statPending').textContent = pending;
+    const today = new Date().toDateString();
+    const todayOrders = allOrders.filter(o => new Date(o.created_at).toDateString() === today);
+    document.getElementById('statOrdersToday').textContent = todayOrders.length;
+    document.getElementById('statMenuItems').textContent = allMenuItems.length;
+  }
+
+  function updatePendingBadge() {
+    const count = allSellers.filter(s => s.status === 'pending').length;
+    const badge = document.getElementById('pendingBadgeSidebar');
+    badge.style.display = count > 0 ? 'inline-block' : 'none';
+    badge.textContent = count;
+  }
+
+  // ── RENDER PENDING QUICK ──
+  function renderPendingQuick() {
+    const pending = allSellers.filter(s => s.status === 'pending');
+    const body = document.getElementById('pendingQuickBody');
+    if (pending.length === 0) {
+      body.innerHTML = `<tr class="empty-row"><td colspan="4">🎉 No pending approvals</td></tr>`;
+      return;
+    }
+    body.innerHTML = pending.map(s => `
+      <tr>
+        <td>
+          <div class="td-name">${s.profiles?.full_name || '–'}</div>
+          <div class="td-muted">${s.profiles?.phone || ''}</div>
+        </td>
+        <td><div class="td-name">${s.stall_name}</div>
+            <div class="td-muted">${s.description || ''}</div></td>
+        <td><div class="td-muted">${formatDate(s.created_at)}</div></td>
+        <td>
+          <div class="action-btns">
+            <button class="btn btn-approve" onclick="approveStall('${s.id}')">✅ Approve</button>
+            <button class="btn btn-reject" onclick="rejectStall('${s.id}')">❌ Reject</button>
+            <button class="btn btn-view" onclick="viewStall('${s.id}')">View</button>
+          </div>
+        </td>
+      </tr>`).join('');
+  }
+
+  // ── RENDER SELLERS ──
+  function renderSellers() {
+    const q = (document.getElementById('sellerSearch')?.value || '').toLowerCase();
+    let filtered = allSellers.filter(s => sellerFilter === 'all' || s.status === sellerFilter);
+    if (q) filtered = filtered.filter(s =>
+      s.stall_name.toLowerCase().includes(q) ||
+      (s.profiles?.full_name || '').toLowerCase().includes(q)
+    );
+
+    const titles = { all: 'All sellers', pending: 'Pending sellers', approved: 'Approved sellers', rejected: 'Rejected sellers' };
+    document.getElementById('sellerTableTitle').textContent = titles[sellerFilter];
+
+    const body = document.getElementById('sellersBody');
+    if (filtered.length === 0) {
+      body.innerHTML = `<tr class="empty-row"><td colspan="6">No sellers found</td></tr>`;
+      return;
+    }
+    body.innerHTML = filtered.map(s => `
+      <tr>
+        <td>
+          <div class="td-name">${s.profiles?.full_name || '–'}</div>
+          <div class="td-muted">${s.profiles?.phone || ''}</div>
+        </td>
+        <td>
+          <div class="td-name">${s.stall_name}</div>
+          <div class="td-muted">${(s.description||'').slice(0,40)}${s.description?.length > 40 ? '…' : ''}</div>
+        </td>
+        <td><div class="td-muted">${(s.opening_time||'–').slice(0,5)} – ${(s.closing_time||'–').slice(0,5)}</div></td>
+        <td>${s.delivers ? `<span class="badge badge-approved">Yes · Rp ${(s.delivery_price||0).toLocaleString('id-ID')}</span>` : '<span style="color:var(--text-muted);font-size:13px;">No</span>'}</td>
+        <td><span class="badge badge-${s.status}">${s.status.charAt(0).toUpperCase()+s.status.slice(1)}</span></td>
+        <td>
+          <div class="action-btns">
+            ${s.status === 'pending' ? `
+              <button class="btn btn-approve" onclick="approveStall('${s.id}')">Approve</button>
+              <button class="btn btn-reject" onclick="rejectStall('${s.id}')">Reject</button>` : ''}
+            ${s.status === 'approved' ? `<button class="btn btn-reject" onclick="rejectStall('${s.id}')">Suspend</button>` : ''}
+            ${s.status === 'rejected' ? `<button class="btn btn-approve" onclick="approveStall('${s.id}')">Reinstate</button>` : ''}
+            <button class="btn btn-view" onclick="viewStall('${s.id}')">Details</button>
+          </div>
+        </td>
+      </tr>`).join('');
+  }
+
+  function setSellerFilter(filter, el) {
+    sellerFilter = filter;
+    document.querySelectorAll('#sellerFilters .filter-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    renderSellers();
+  }
+
+  // ── RENDER STUDENTS ──
+  function renderStudents() {
+    const q = (document.getElementById('studentSearch')?.value || '').toLowerCase();
+    let filtered = allStudents;
+    if (q) filtered = filtered.filter(s =>
+      (s.full_name||'').toLowerCase().includes(q) ||
+      (s.npm||'').includes(q)
+    );
+    const body = document.getElementById('studentsBody');
+    if (filtered.length === 0) {
+      body.innerHTML = `<tr class="empty-row"><td colspan="5">No students found</td></tr>`;
+      return;
+    }
+    body.innerHTML = filtered.map(s => `
+      <tr>
+        <td><div class="td-name">${s.full_name || '–'}</div></td>
+        <td><div class="td-muted">${s.id}</div></td>
+        <td><span class="badge badge-student">${s.npm || '–'}</span></td>
+        <td><div class="td-muted">${s.phone || '–'}</div></td>
+        <td><div class="td-muted">${formatDate(s.created_at)}</div></td>
+      </tr>`).join('');
+  }
+
+  // ── RENDER ORDERS ──
+  function renderAllOrders() {
+    const q = (document.getElementById('orderSearch')?.value || '').toLowerCase();
+    let filtered = allOrders;
+    if (q) filtered = filtered.filter(o =>
+      o.id.includes(q) ||
+      (o.profiles?.full_name||'').toLowerCase().includes(q) ||
+      (o.stalls?.stall_name||'').toLowerCase().includes(q)
+    );
+    const body = document.getElementById('ordersBody');
+    if (filtered.length === 0) {
+      body.innerHTML = `<tr class="empty-row"><td colspan="8">No orders found</td></tr>`;
+      return;
+    }
+    body.innerHTML = filtered.map(o => {
+      const items = (o.order_items||[]).map(i => `${i.quantity}× ${i.name}`).join(', ');
+      return `<tr>
+        <td><div class="td-name">#${o.id.slice(-6).toUpperCase()}</div></td>
+        <td><div class="td-muted">${o.profiles?.full_name||'–'}</div></td>
+        <td><div class="td-muted">${o.stalls?.stall_name||'–'}</div></td>
+        <td><div class="order-items-cell">${items||'–'}</div></td>
+        <td><div class="td-name">Rp ${(o.total_price||0).toLocaleString('id-ID')}</div></td>
+        <td>
+          <span class="badge ${o.payment_method==='online' ? 'badge-seller' : 'badge-student'}">${o.payment_method}</span>
+          <div class="td-muted" style="margin-top:3px;">${o.payment_status}</div>
+        </td>
+        <td><span class="badge badge-${getOrderBadgeClass(o.status)}">${o.status}</span></td>
+        <td><div class="td-muted">${formatDateTime(o.created_at)}</div></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function getOrderBadgeClass(status) {
+    const map = { pending: 'pending', confirmed: 'seller', preparing: 'seller', ready: 'approved', completed: 'approved', cancelled: 'rejected' };
+    return map[status] || 'pending';
+  }
+
+  // ── RENDER MENU ITEMS ──
+  function renderMenuItems() {
+    const q = (document.getElementById('menuSearch')?.value || '').toLowerCase();
+    let filtered = allMenuItems;
+    if (q) filtered = filtered.filter(m =>
+      m.name.toLowerCase().includes(q) ||
+      (m.stalls?.stall_name||'').toLowerCase().includes(q)
+    );
+    const body = document.getElementById('menuBody');
+    if (filtered.length === 0) {
+      body.innerHTML = `<tr class="empty-row"><td colspan="5">No menu items found</td></tr>`;
+      return;
+    }
+    body.innerHTML = filtered.map(m => `
+      <tr>
+        <td>
+          <div class="td-name">${m.name}</div>
+          <div class="td-muted">${(m.description||'').slice(0,50)}${(m.description||'').length>50?'…':''}</div>
+        </td>
+        <td><div class="td-muted">${m.stalls?.stall_name||'–'}</div></td>
+        <td><span class="badge badge-student">${m.category||'Food'}</span></td>
+        <td><div class="td-name">Rp ${m.price.toLocaleString('id-ID')}</div></td>
+        <td>${m.is_available
+          ? '<span class="badge badge-approved">Available</span>'
+          : '<span class="badge badge-rejected">Unavailable</span>'}</td>
+      </tr>`).join('');
+  }
+
+  // ── APPROVE / REJECT ──
+  async function approveStall(stallId) {
+    const { error } = await sb.from('stalls').update({ status: 'approved' }).eq('id', stallId);
+    if (error) { showToast('Failed: ' + error.message); return; }
+    showToast('✅ Stall approved! Seller can now go live.');
+    await loadSellers();
+    updateDashboardStats();
+  }
+
+  async function rejectStall(stallId) {
+    const reason = prompt('Optional: Enter a reason for rejection (shown to seller)');
+    const { error } = await sb.from('stalls').update({ status: 'rejected' }).eq('id', stallId);
+    if (error) { showToast('Failed: ' + error.message); return; }
+    showToast('Stall rejected.');
+    await loadSellers();
+    updateDashboardStats();
+  }
+
+  // ── VIEW STALL DETAIL ──
+  function viewStall(stallId) {
+    const s = allSellers.find(x => x.id === stallId);
+    if (!s) return;
+
+    document.getElementById('modalStallName').textContent = s.stall_name;
+    document.getElementById('modalStallBody').innerHTML = `
+      <div class="detail-row"><span class="detail-key">Owner</span><span class="detail-val">${s.profiles?.full_name||'–'}</span></div>
+      <div class="detail-row"><span class="detail-key">Phone</span><span class="detail-val">${s.profiles?.phone||'–'}</span></div>
+      <div class="detail-row"><span class="detail-key">Description</span><span class="detail-val">${s.description||'–'}</span></div>
+      <div class="detail-row"><span class="detail-key">Hours</span><span class="detail-val">${(s.opening_time||'–').slice(0,5)} – ${(s.closing_time||'–').slice(0,5)}</span></div>
+      <div class="detail-row"><span class="detail-key">Open days</span><span class="detail-val">${(s.open_days||[]).join(', ') || '–'}</span></div>
+      <div class="detail-row"><span class="detail-key">Delivery</span><span class="detail-val">${s.delivers ? `Yes · Rp ${(s.delivery_price||0).toLocaleString('id-ID')}` : 'No'}</span></div>
+      <div class="detail-row"><span class="detail-key">Status</span><span class="detail-val"><span class="badge badge-${s.status}">${s.status}</span></span></div>
+      <div class="detail-row"><span class="detail-key">Registered</span><span class="detail-val">${formatDate(s.created_at)}</span></div>
+    `;
+
+    const footer = document.getElementById('modalStallFooter');
+    footer.innerHTML = `<button class="btn btn-view" onclick="closeModal()">Close</button>`;
+    if (s.status === 'pending') {
+      footer.innerHTML += `
+        <button class="btn btn-reject" onclick="rejectStall('${s.id}');closeModal()">Reject</button>
+        <button class="btn btn-approve" onclick="approveStall('${s.id}');closeModal()">Approve</button>`;
+    }
+
+    document.getElementById('stallModal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('stallModal').classList.remove('open');
+  }
+  document.getElementById('stallModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('stallModal')) closeModal();
+  });
+
+  // ── SECTION SWITCHING ──
+  function switchSection(section, el) {
+    document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+    document.getElementById('section-' + section).classList.add('active');
+    if (el) el.classList.add('active');
+  }
+
+  // ── LOGOUT ──
+  async function handleLogout() {
+    await sb.auth.signOut();
+    window.location.href = 'kantin_auth.html';
+  }
+
+  // ── HELPERS ──
+  function formatDate(str) {
+    if (!str) return '–';
+    return new Date(str).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  function formatDateTime(str) {
+    if (!str) return '–';
+    return new Date(str).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  init();
+</script>
+</body>
+</html>

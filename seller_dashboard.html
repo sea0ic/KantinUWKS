@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Kantin — Seller Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #FBF6EE;
+    --cream-dark: #F3EBE0;
+    --orange: #E8834A;
+    --orange-light: #F5C09A;
+    --orange-pale: #FDF0E6;
+    --green: #4A7C5F;
+    --green-light: #A8C5B4;
+    --green-pale: #EDF5F0;
+    --brown: #6B4C3B;
+    --text: #2C1810;
+    --text-mid: #6B4C3B;
+    --text-muted: #9E7E6E;
+    --border: rgba(107,76,59,0.12);
+    --white: #FFFFFF;
+    --red: #C0392B;
+    --red-pale: #FDECEA;
+  }
+
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--text); min-height: 100vh; }
+
+  /* ── NAV ── */
+  .nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(251,246,238,0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px; height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-brand { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; color: var(--text); letter-spacing: -0.5px; text-decoration: none; }
+  .nav-brand span { color: var(--orange); }
+  .nav-badge { font-size: 11px; background: var(--orange-pale); color: var(--orange); border: 1px solid var(--orange-light); border-radius: 100px; padding: 3px 10px; font-weight: 500; margin-left: 8px; }
+  .nav-right { display: flex; align-items: center; gap: 12px; }
+  .profile-btn { width: 38px; height: 38px; border-radius: 50%; background: var(--brown); color: var(--white); border: none; cursor: pointer; font-family: 'Fraunces', serif; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; transition: all 0.2s; position: relative; }
+  .profile-btn:hover { background: var(--orange); }
+  .profile-dropdown { position: absolute; top: calc(100% + 10px); right: 0; background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 8px; min-width: 200px; box-shadow: 0 8px 32px rgba(44,24,16,0.12); display: none; z-index: 200; }
+  .profile-dropdown.open { display: block; }
+  .dropdown-header { padding: 10px 12px 12px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
+  .dropdown-name { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 600; color: var(--text); }
+  .dropdown-email { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .dropdown-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; font-size: 13px; color: var(--text-mid); cursor: pointer; transition: background 0.15s; text-decoration: none; }
+  .dropdown-item:hover { background: var(--cream); }
+  .dropdown-item.danger { color: var(--red); }
+  .dropdown-item.danger:hover { background: var(--red-pale); }
+
+  /* ── TABS ── */
+  .tabs { background: var(--white); border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; gap: 4px; }
+  .tab { padding: 16px 20px; border: none; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; display: flex; align-items: center; gap: 7px; }
+  .tab:hover { color: var(--text-mid); }
+  .tab.active { color: var(--orange); border-bottom-color: var(--orange); font-weight: 500; }
+  .tab-badge { background: var(--orange); color: var(--white); border-radius: 100px; padding: 1px 7px; font-size: 11px; min-width: 18px; text-align: center; }
+
+  /* ── PAGE SECTIONS ── */
+  .page-section { display: none; padding: 32px; max-width: 1100px; margin: 0 auto; }
+  .page-section.active { display: block; }
+
+  /* ── PENDING / REJECTED STATES ── */
+  .status-screen { min-height: 60vh; display: flex; align-items: center; justify-content: center; }
+  .status-card { background: var(--white); border: 1px solid var(--border); border-radius: 24px; padding: 48px; text-align: center; max-width: 480px; }
+  .status-icon { font-size: 52px; margin-bottom: 20px; }
+  .status-title { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 600; letter-spacing: -0.5px; color: var(--text); margin-bottom: 8px; }
+  .status-sub { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+
+  /* ── OVERVIEW ── */
+  .overview-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; }
+  .overview-stall-name { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 600; letter-spacing: -1px; color: var(--text); }
+  .overview-stall-name span { color: var(--orange); }
+  .overview-sub { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
+
+  .open-toggle { display: flex; align-items: center; gap: 12px; background: var(--white); border: 1.5px solid var(--border); border-radius: 16px; padding: 12px 20px; cursor: pointer; transition: all 0.2s; }
+  .open-toggle.is-open { border-color: var(--green-light); background: var(--green-pale); }
+  .toggle-label { font-size: 14px; font-weight: 500; color: var(--text-mid); }
+  .toggle-switch { width: 44px; height: 24px; background: var(--cream-dark); border-radius: 100px; position: relative; transition: background 0.2s; flex-shrink: 0; }
+  .toggle-switch.on { background: var(--green); }
+  .toggle-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: var(--white); border-radius: 50%; transition: transform 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
+  .toggle-switch.on::after { transform: translateX(20px); }
+
+  /* Stats grid */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
+  .stat-card { background: var(--white); border: 1px solid var(--border); border-radius: 18px; padding: 20px 22px; }
+  .stat-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+  .stat-value { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 600; letter-spacing: -0.5px; color: var(--text); }
+  .stat-value small { font-size: 14px; font-weight: 300; color: var(--text-muted); font-family: 'DM Sans', sans-serif; }
+
+  /* Stall settings card */
+  .settings-card { background: var(--white); border: 1px solid var(--border); border-radius: 20px; padding: 24px; margin-bottom: 20px; }
+  .settings-card-title { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 18px; letter-spacing: -0.3px; }
+  .settings-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .field-group { margin-bottom: 14px; }
+  .field-label { font-size: 12px; font-weight: 500; color: var(--text-mid); margin-bottom: 6px; display: block; }
+  .field-input { width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); background: var(--cream); transition: border-color 0.2s; outline: none; }
+  .field-input:focus { border-color: var(--orange); background: var(--white); }
+  textarea.field-input { resize: none; }
+  .days-picker { display: flex; gap: 6px; flex-wrap: wrap; }
+  .day-chip { padding: 6px 12px; border-radius: 100px; border: 1.5px solid var(--border); background: var(--white); font-size: 12px; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all 0.2s; }
+  .day-chip.selected { background: var(--orange); color: var(--white); border-color: var(--orange); }
+
+  .delivery-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-top: 1px solid var(--border); margin-top: 4px; }
+  .delivery-label { font-size: 14px; color: var(--text-mid); font-weight: 500; }
+  .delivery-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  .btn { padding: 11px 22px; border-radius: 12px; border: none; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+  .btn-primary { background: var(--orange); color: var(--white); }
+  .btn-primary:hover { background: #d4723d; }
+  .btn-secondary { background: var(--cream-dark); color: var(--text-mid); }
+  .btn-secondary:hover { background: var(--cream); }
+  .btn-danger { background: var(--red-pale); color: var(--red); }
+  .btn-danger:hover { background: #f5c6c2; }
+  .btn-sm { padding: 7px 14px; font-size: 13px; border-radius: 10px; }
+
+  /* ── MENU ── */
+  .menu-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .menu-item-card { background: var(--white); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; transition: all 0.2s; }
+  .menu-item-card:hover { box-shadow: 0 6px 20px rgba(44,24,16,0.08); }
+  .menu-item-card.unavailable { opacity: 0.55; }
+  .menu-item-img { height: 130px; background: var(--cream-dark); display: flex; align-items: center; justify-content: center; font-size: 40px; position: relative; overflow: hidden; }
+  .menu-item-img img { width: 100%; height: 100%; object-fit: cover; }
+  .menu-item-body { padding: 14px 16px; }
+  .menu-item-name { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 3px; letter-spacing: -0.2px; }
+  .menu-item-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .menu-item-footer { display: flex; align-items: center; justify-content: space-between; }
+  .menu-item-price { font-size: 15px; font-weight: 500; color: var(--orange); }
+  .menu-item-actions { display: flex; gap: 6px; }
+  .avail-toggle { font-size: 11px; padding: 4px 10px; border-radius: 100px; border: 1px solid; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 500; transition: all 0.15s; }
+  .avail-toggle.on { background: var(--green-pale); color: var(--green); border-color: var(--green-light); }
+  .avail-toggle.off { background: var(--red-pale); color: var(--red); border-color: #f1a9a0; }
+
+  /* ── ORDERS ── */
+  .orders-filter { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .order-card { background: var(--white); border: 1px solid var(--border); border-radius: 18px; padding: 18px 20px; margin-bottom: 12px; transition: all 0.2s; }
+  .order-card:hover { border-color: var(--orange-light); }
+  .order-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .order-id { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 600; color: var(--text); }
+  .order-time { font-size: 12px; color: var(--text-muted); }
+  .order-status { padding: 4px 12px; border-radius: 100px; font-size: 12px; font-weight: 500; }
+  .status-pending { background: #FFF8E6; color: #B8860B; border: 1px solid #F0D080; }
+  .status-confirmed { background: var(--orange-pale); color: var(--orange); border: 1px solid var(--orange-light); }
+  .status-preparing { background: #E8F0FE; color: #1967D2; border: 1px solid #AECBFA; }
+  .status-ready { background: var(--green-pale); color: var(--green); border: 1px solid var(--green-light); }
+  .status-completed { background: var(--cream-dark); color: var(--text-muted); border: 1px solid var(--border); }
+  .status-cancelled { background: var(--red-pale); color: var(--red); border: 1px solid #f1a9a0; }
+  .order-items-list { font-size: 13px; color: var(--text-mid); margin-bottom: 14px; line-height: 1.7; }
+  .order-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+  .order-total { font-size: 15px; font-weight: 500; color: var(--text); }
+  .order-total span { color: var(--orange); }
+  .order-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .order-tag { font-size: 11px; padding: 3px 9px; border-radius: 100px; background: var(--cream-dark); color: var(--text-muted); }
+  .order-actions { display: flex; gap: 8px; }
+  .empty-orders { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+  .empty-orders-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-orders-title { font-family: 'Fraunces', serif; font-size: 18px; color: var(--text); margin-bottom: 6px; }
+
+  /* ── MODAL ── */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(44,24,16,0.45); z-index: 500; display: none; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--white); border-radius: 24px; padding: 32px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; animation: modalIn 0.2s ease; }
+  @keyframes modalIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .modal-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; letter-spacing: -0.5px; color: var(--text); margin-bottom: 4px; }
+  .modal-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+  .img-upload { width: 100%; height: 120px; border: 2px dashed var(--border); border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: all 0.2s; background: var(--cream); }
+  .img-upload:hover { border-color: var(--orange-light); background: var(--orange-pale); }
+  .img-upload-icon { font-size: 28px; }
+  .img-upload-label { font-size: 13px; color: var(--text-muted); }
+  .img-preview { width: 100%; height: 120px; border-radius: 14px; object-fit: cover; display: none; }
+
+  /* ── TOAST ── */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: var(--white); border-radius: 100px; padding: 12px 24px; font-size: 13px; font-weight: 500; transition: transform 0.3s ease; z-index: 999; white-space: nowrap; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 768px) {
+    .nav { padding: 0 16px; }
+    .tabs { padding: 0 16px; overflow-x: auto; }
+    .page-section { padding: 20px 16px; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .settings-row { grid-template-columns: 1fr; }
+    .menu-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div style="display:flex;align-items:center;">
+    <a class="nav-brand" href="#">Kantin<span>.</span></a>
+    <span class="nav-badge">Seller</span>
+  </div>
+  <div class="nav-right">
+    <div style="position:relative;">
+      <button class="profile-btn" id="profileBtn" onclick="toggleDropdown()">
+        <span id="profileInitial">?</span>
+      </button>
+      <div class="profile-dropdown" id="profileDropdown">
+        <div class="dropdown-header">
+          <div class="dropdown-name" id="dropdownName">Loading...</div>
+          <div class="dropdown-email" id="dropdownEmail"></div>
+        </div>
+        <div class="dropdown-item danger" onclick="handleLogout()">
+          <span>🚪</span> Sign out
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- TABS -->
+<div class="tabs" id="mainTabs" style="display:none;">
+  <button class="tab active" onclick="switchTab('overview')">📊 Overview</button>
+  <button class="tab" onclick="switchTab('menu')" id="menuTab">🍽️ Menu</button>
+  <button class="tab" onclick="switchTab('orders')" id="ordersTab">
+    📦 Orders <span class="tab-badge" id="pendingBadge" style="display:none">0</span>
+  </button>
+</div>
+
+<!-- PENDING STATE -->
+<div id="pendingScreen" style="display:none;" class="page-section active">
+  <div class="status-screen">
+    <div class="status-card">
+      <div class="status-icon">⏳</div>
+      <div class="status-title">Application under review</div>
+      <div class="status-sub">Your stall registration has been submitted and is currently being reviewed by our admin team. We'll notify you by email once you're approved.<br><br>This usually takes 1–2 business days.</div>
+    </div>
+  </div>
+</div>
+
+<!-- REJECTED STATE -->
+<div id="rejectedScreen" style="display:none;" class="page-section active">
+  <div class="status-screen">
+    <div class="status-card">
+      <div class="status-icon">❌</div>
+      <div class="status-title">Application rejected</div>
+      <div class="status-sub">Unfortunately your stall application was not approved. Please contact the campus canteen admin for more information.</div>
+    </div>
+  </div>
+</div>
+
+<!-- OVERVIEW TAB -->
+<div class="page-section" id="tab-overview">
+  <div class="overview-header">
+    <div>
+      <div class="overview-stall-name" id="stallNameDisplay">–</div>
+      <div class="overview-sub" id="stallDescDisplay"></div>
+    </div>
+    <div class="open-toggle" id="openToggle" onclick="toggleStallOpen()">
+      <div class="toggle-label" id="toggleLabel">Stall is closed</div>
+      <div class="toggle-switch" id="toggleSwitch"></div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Orders today</div>
+      <div class="stat-value" id="statOrdersToday">–</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Revenue today</div>
+      <div class="stat-value" id="statRevenue">–</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Menu items</div>
+      <div class="stat-value" id="statMenuItems">–</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Hours today</div>
+      <div class="stat-value" id="statHours"><small>–</small></div>
+    </div>
+  </div>
+
+  <!-- Stall Settings -->
+  <div class="settings-card">
+    <div class="settings-card-title">Stall settings</div>
+    <div class="field-group">
+      <label class="field-label">Stall name</label>
+      <input class="field-input" id="settingName" type="text" placeholder="Your stall name"/>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Description</label>
+      <textarea class="field-input" id="settingDesc" rows="2" placeholder="What does your stall serve?"></textarea>
+    </div>
+    <div class="settings-row">
+      <div class="field-group">
+        <label class="field-label">Opening time</label>
+        <input class="field-input" id="settingOpen" type="time"/>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Closing time</label>
+        <input class="field-input" id="settingClose" type="time"/>
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Open days</label>
+      <div class="days-picker" id="daysPicker">
+        <div class="day-chip" data-day="Mon" onclick="toggleDay(this)">Mon</div>
+        <div class="day-chip" data-day="Tue" onclick="toggleDay(this)">Tue</div>
+        <div class="day-chip" data-day="Wed" onclick="toggleDay(this)">Wed</div>
+        <div class="day-chip" data-day="Thu" onclick="toggleDay(this)">Thu</div>
+        <div class="day-chip" data-day="Fri" onclick="toggleDay(this)">Fri</div>
+        <div class="day-chip" data-day="Sat" onclick="toggleDay(this)">Sat</div>
+        <div class="day-chip" data-day="Sun" onclick="toggleDay(this)">Sun</div>
+      </div>
+    </div>
+
+    <!-- Delivery -->
+    <div class="delivery-row">
+      <div>
+        <div class="delivery-label">Deliver to classroom</div>
+        <div class="delivery-sub">Students can request food delivery to their classroom</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <select class="field-input" id="settingDeliveryPrice" style="width:auto;padding:8px 12px;">
+          <option value="3000">Rp 3.000</option>
+          <option value="5000">Rp 5.000</option>
+          <option value="7000">Rp 7.000</option>
+          <option value="10000">Rp 10.000</option>
+        </select>
+        <div class="open-toggle" id="deliveryToggle" onclick="toggleDelivery()" style="padding:8px 14px;">
+          <div class="toggle-label" id="deliveryLabel" style="font-size:13px;">Off</div>
+          <div class="toggle-switch" id="deliverySwitch"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;margin-top:18px;">
+      <button class="btn btn-primary" onclick="saveStallSettings()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- MENU TAB -->
+<div class="page-section" id="tab-menu">
+  <div class="menu-toolbar">
+    <div style="font-family:'Fraunces',serif;font-size:20px;font-weight:600;letter-spacing:-0.5px;">Menu items</div>
+    <button class="btn btn-primary" onclick="openMenuModal()">+ Add item</button>
+  </div>
+  <div class="menu-grid" id="menuGrid">
+    <div style="color:var(--text-muted);font-size:14px;padding:40px 0;">Loading menu...</div>
+  </div>
+</div>
+
+<!-- ORDERS TAB -->
+<div class="page-section" id="tab-orders">
+  <div class="orders-filter">
+    <button class="filter-chip active" onclick="setOrderFilter('all', this)">All</button>
+    <button class="filter-chip" onclick="setOrderFilter('pending', this)">New</button>
+    <button class="filter-chip" onclick="setOrderFilter('confirmed', this)">Confirmed</button>
+    <button class="filter-chip" onclick="setOrderFilter('preparing', this)">Preparing</button>
+    <button class="filter-chip" onclick="setOrderFilter('ready', this)">Ready</button>
+    <button class="filter-chip" onclick="setOrderFilter('completed', this)">Completed</button>
+  </div>
+  <div id="ordersList"></div>
+</div>
+
+<!-- ADD/EDIT MENU ITEM MODAL -->
+<div class="modal-overlay" id="menuModal">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">Add menu item</div>
+    <div class="modal-sub" id="modalSub">Add a new item to your stall menu</div>
+
+    <div class="field-group">
+      <label class="field-label">Item name</label>
+      <input class="field-input" id="itemName" type="text" placeholder="e.g. Nasi Goreng Spesial"/>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Description</label>
+      <textarea class="field-input" id="itemDesc" rows="2" placeholder="Describe this item..."></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="field-group">
+        <label class="field-label">Price (Rp)</label>
+        <input class="field-input" id="itemPrice" type="number" placeholder="15000"/>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Category</label>
+        <select class="field-input" id="itemCategory">
+          <option value="Food">🍱 Food</option>
+          <option value="Drinks">🥤 Drinks</option>
+          <option value="Snacks">🍢 Snacks</option>
+          <option value="Dessert">🍮 Dessert</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Photo</label>
+      <input type="file" id="itemImageFile" accept="image/*" style="display:none" onchange="previewImage(this)"/>
+      <img id="imgPreview" class="img-preview"/>
+      <div class="img-upload" id="imgUploadArea" onclick="document.getElementById('itemImageFile').click()">
+        <div class="img-upload-icon">📷</div>
+        <div class="img-upload-label">Click to upload photo</div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeMenuModal()">Cancel</button>
+      <button class="btn btn-primary" id="saveItemBtn" onclick="saveMenuItem()">Add item</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<style>
+  .filter-chip { padding: 8px 16px; border-radius: 100px; border: 1.5px solid var(--border); background: var(--white); font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text-mid); cursor: pointer; transition: all 0.2s; }
+  .filter-chip:hover { border-color: var(--orange-light); }
+  .filter-chip.active { background: var(--orange); color: var(--white); border-color: var(--orange); font-weight: 500; }
+</style>
+
+<script>
+  const { createClient } = supabase;
+  const sb = createClient(
+    'https://kalgejckrmlpwwxtitmz.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthbGdlamNrcm1scHd3eHRpdG16Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MjI2NzYsImV4cCI6MjA5MTI5ODY3Nn0.5YQtOtIMciiaMiAyk-b9WM7iIyzHSZEMcs2a1XF5-ho'
+  );
+
+  // ── STATE ──
+  let currentUser = null;
+  let currentProfile = null;
+  let currentStall = null;
+  let menuItems = [];
+  let allOrders = [];
+  let currentOrderFilter = 'all';
+  let editingItemId = null;
+  let selectedDays = [];
+  let deliveryEnabled = false;
+
+  // ── INIT ──
+  async function init() {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) { window.location.href = 'kantin_auth.html'; return; }
+
+    const { data: profile } = await sb.from('profiles').select('*').eq('id', user.id).single();
+    if (!profile || profile.role !== 'seller') { window.location.href = 'kantin_auth.html'; return; }
+
+    currentUser = user;
+    currentProfile = profile;
+
+    // Nav
+    const name = profile.full_name || 'Seller';
+    document.getElementById('profileInitial').textContent = name.charAt(0).toUpperCase();
+    document.getElementById('dropdownName').textContent = name;
+    document.getElementById('dropdownEmail').textContent = user.email;
+
+    // Load stall
+    const { data: stall } = await sb.from('stalls').select('*').eq('owner_id', user.id).single();
+    currentStall = stall;
+
+    if (!stall) { showScreen('pending'); return; }
+    if (stall.status === 'pending') { showScreen('pending'); return; }
+    if (stall.status === 'rejected') { showScreen('rejected'); return; }
+
+    // Approved — show full dashboard
+    showScreen('dashboard');
+    loadOverview();
+    loadMenu();
+    loadOrders();
+
+    // Poll for new orders every 30s
+    setInterval(loadOrders, 30000);
+  }
+
+  function showScreen(screen) {
+    document.getElementById('pendingScreen').style.display = 'none';
+    document.getElementById('rejectedScreen').style.display = 'none';
+    document.getElementById('mainTabs').style.display = 'none';
+    ['overview','menu','orders'].forEach(t => {
+      document.getElementById('tab-' + t).classList.remove('active');
+    });
+
+    if (screen === 'pending') {
+      document.getElementById('pendingScreen').style.display = 'block';
+    } else if (screen === 'rejected') {
+      document.getElementById('rejectedScreen').style.display = 'block';
+    } else {
+      document.getElementById('mainTabs').style.display = 'flex';
+      document.getElementById('tab-overview').classList.add('active');
+    }
+  }
+
+  // ── TABS ──
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    event.target.closest('.tab').classList.add('active');
+    ['overview','menu','orders'].forEach(t => {
+      document.getElementById('tab-' + t).classList.remove('active');
+    });
+    document.getElementById('tab-' + tab).classList.add('active');
+  }
+
+  // ── OVERVIEW ──
+  function loadOverview() {
+    const s = currentStall;
+    document.getElementById('stallNameDisplay').textContent = s.stall_name;
+    document.getElementById('stallDescDisplay').textContent = s.description || '';
+
+    // Open toggle
+    updateOpenToggleUI(s.is_open);
+
+    // Settings fields
+    document.getElementById('settingName').value = s.stall_name || '';
+    document.getElementById('settingDesc').value = s.description || '';
+    document.getElementById('settingOpen').value = (s.opening_time || '07:00').slice(0,5);
+    document.getElementById('settingClose').value = (s.closing_time || '16:00').slice(0,5);
+
+    // Days
+    selectedDays = s.open_days || ['Mon','Tue','Wed','Thu','Fri'];
+    document.querySelectorAll('.day-chip').forEach(chip => {
+      chip.classList.toggle('selected', selectedDays.includes(chip.dataset.day));
+    });
+
+    // Delivery
+    deliveryEnabled = s.delivers || false;
+    updateDeliveryUI();
+    if (s.delivery_price) {
+      document.getElementById('settingDeliveryPrice').value = s.delivery_price;
+    }
+
+    // Hours stat
+    document.getElementById('statHours').innerHTML =
+      `<small>${(s.opening_time||'07:00').slice(0,5)} – ${(s.closing_time||'16:00').slice(0,5)}</small>`;
+  }
+
+  function updateOpenToggleUI(isOpen) {
+    const toggle = document.getElementById('openToggle');
+    const sw = document.getElementById('toggleSwitch');
+    const label = document.getElementById('toggleLabel');
+    toggle.classList.toggle('is-open', isOpen);
+    sw.classList.toggle('on', isOpen);
+    label.textContent = isOpen ? 'Stall is open' : 'Stall is closed';
+  }
+
+  async function toggleStallOpen() {
+    const newState = !currentStall.is_open;
+    const { error } = await sb.from('stalls').update({ is_open: newState }).eq('id', currentStall.id);
+    if (error) { showToast('Failed to update status'); return; }
+    currentStall.is_open = newState;
+    updateOpenToggleUI(newState);
+    showToast(newState ? '✅ Stall is now open!' : 'Stall is now closed');
+  }
+
+  function toggleDay(el) {
+    const day = el.dataset.day;
+    if (selectedDays.includes(day)) {
+      selectedDays = selectedDays.filter(d => d !== day);
+      el.classList.remove('selected');
+    } else {
+      selectedDays.push(day);
+      el.classList.add('selected');
+    }
+  }
+
+  function updateDeliveryUI() {
+    const toggle = document.getElementById('deliveryToggle');
+    const sw = document.getElementById('deliverySwitch');
+    const label = document.getElementById('deliveryLabel');
+    toggle.classList.toggle('is-open', deliveryEnabled);
+    sw.classList.toggle('on', deliveryEnabled);
+    label.textContent = deliveryEnabled ? 'On' : 'Off';
+  }
+
+  function toggleDelivery() {
+    deliveryEnabled = !deliveryEnabled;
+    updateDeliveryUI();
+  }
+
+  async function saveStallSettings() {
+    const updates = {
+      stall_name:    document.getElementById('settingName').value.trim(),
+      description:   document.getElementById('settingDesc').value.trim(),
+      opening_time:  document.getElementById('settingOpen').value,
+      closing_time:  document.getElementById('settingClose').value,
+      open_days:     selectedDays,
+      delivers:      deliveryEnabled,
+      delivery_price: parseInt(document.getElementById('settingDeliveryPrice').value)
+    };
+
+    if (!updates.stall_name) { showToast('Stall name is required'); return; }
+
+    const { error } = await sb.from('stalls').update(updates).eq('id', currentStall.id);
+    if (error) { showToast('Failed to save: ' + error.message); return; }
+
+    Object.assign(currentStall, updates);
+    document.getElementById('stallNameDisplay').textContent = updates.stall_name;
+    document.getElementById('stallDescDisplay').textContent = updates.description;
+    document.getElementById('statHours').innerHTML =
+      `<small>${updates.opening_time.slice(0,5)} – ${updates.closing_time.slice(0,5)}</small>`;
+    showToast('✅ Settings saved!');
+  }
+
+  // ── MENU ──
+  async function loadMenu() {
+    const { data, error } = await sb
+      .from('menu_items')
+      .select('*')
+      .eq('stall_id', currentStall.id)
+      .order('created_at', { ascending: false });
+
+    if (error) { showToast('Failed to load menu'); return; }
+    menuItems = data || [];
+    document.getElementById('statMenuItems').textContent = menuItems.length;
+    renderMenu();
+  }
+
+  function renderMenu() {
+    const grid = document.getElementById('menuGrid');
+    if (menuItems.length === 0) {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 20px;">
+        <div style="font-size:40px;margin-bottom:12px;">🍽️</div>
+        <div style="font-family:'Fraunces',serif;font-size:18px;color:var(--text);margin-bottom:6px;">No menu items yet</div>
+        <div style="font-size:14px;color:var(--text-muted);">Add your first item to get started</div>
+      </div>`;
+      return;
+    }
+
+    grid.innerHTML = menuItems.map(item => `
+      <div class="menu-item-card ${item.is_available ? '' : 'unavailable'}">
+        <div class="menu-item-img">
+          ${item.image_url
+            ? `<img src="${item.image_url}" alt="${item.name}"/>`
+            : `<span style="font-size:36px;">${getCategoryEmoji(item.category)}</span>`}
+        </div>
+        <div class="menu-item-body">
+          <div class="menu-item-name">${item.name}</div>
+          <div class="menu-item-desc">${item.description || 'No description'}</div>
+          <div class="menu-item-footer">
+            <div class="menu-item-price">Rp ${item.price.toLocaleString('id-ID')}</div>
+            <div class="menu-item-actions">
+              <button class="avail-toggle ${item.is_available ? 'on' : 'off'}"
+                onclick="toggleItemAvail('${item.id}', ${item.is_available})">
+                ${item.is_available ? 'Available' : 'Unavailable'}
+              </button>
+              <button class="btn btn-sm btn-secondary" onclick="editMenuItem('${item.id}')">✏️</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteMenuItem('${item.id}')">🗑️</button>
+            </div>
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  function getCategoryEmoji(cat) {
+    const map = { Food: '🍱', Drinks: '🥤', Snacks: '🍢', Dessert: '🍮' };
+    return map[cat] || '🍽️';
+  }
+
+  // Menu modal
+  function openMenuModal(itemId = null) {
+    editingItemId = itemId;
+    document.getElementById('modalTitle').textContent = itemId ? 'Edit item' : 'Add menu item';
+    document.getElementById('modalSub').textContent = itemId ? 'Update this menu item' : 'Add a new item to your stall menu';
+    document.getElementById('saveItemBtn').textContent = itemId ? 'Save changes' : 'Add item';
+
+    if (itemId) {
+      const item = menuItems.find(m => m.id === itemId);
+      document.getElementById('itemName').value = item.name;
+      document.getElementById('itemDesc').value = item.description || '';
+      document.getElementById('itemPrice').value = item.price;
+      document.getElementById('itemCategory').value = item.category || 'Food';
+      if (item.image_url) {
+        document.getElementById('imgPreview').src = item.image_url;
+        document.getElementById('imgPreview').style.display = 'block';
+        document.getElementById('imgUploadArea').style.display = 'none';
+      }
+    } else {
+      document.getElementById('itemName').value = '';
+      document.getElementById('itemDesc').value = '';
+      document.getElementById('itemPrice').value = '';
+      document.getElementById('itemCategory').value = 'Food';
+      document.getElementById('imgPreview').style.display = 'none';
+      document.getElementById('imgUploadArea').style.display = 'flex';
+    }
+
+    document.getElementById('menuModal').classList.add('open');
+  }
+
+  function closeMenuModal() {
+    document.getElementById('menuModal').classList.remove('open');
+    editingItemId = null;
+  }
+
+  function editMenuItem(id) { openMenuModal(id); }
+
+  function previewImage(input) {
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        document.getElementById('imgPreview').src = e.target.result;
+        document.getElementById('imgPreview').style.display = 'block';
+        document.getElementById('imgUploadArea').style.display = 'none';
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  async function uploadImage(file) {
+    const ext = file.name.split('.').pop();
+    const path = `${currentStall.id}/${Date.now()}.${ext}`;
+    const { error } = await sb.storage.from('menu-images').upload(path, file);
+    if (error) return null;
+    const { data } = sb.storage.from('menu-images').getPublicUrl(path);
+    return data.publicUrl;
+  }
+
+  async function saveMenuItem() {
+    const name     = document.getElementById('itemName').value.trim();
+    const desc     = document.getElementById('itemDesc').value.trim();
+    const price    = parseInt(document.getElementById('itemPrice').value);
+    const category = document.getElementById('itemCategory').value;
+    const fileInput = document.getElementById('itemImageFile');
+
+    if (!name || !price) { showToast('Name and price are required'); return; }
+
+    document.getElementById('saveItemBtn').disabled = true;
+    document.getElementById('saveItemBtn').textContent = 'Saving...';
+
+    let image_url = editingItemId ? menuItems.find(m => m.id === editingItemId)?.image_url : null;
+    if (fileInput.files[0]) {
+      const uploaded = await uploadImage(fileInput.files[0]);
+      if (uploaded) image_url = uploaded;
+    }
+
+    const payload = { name, description: desc, price, category, image_url, stall_id: currentStall.id };
+
+    let error;
+    if (editingItemId) {
+      ({ error } = await sb.from('menu_items').update(payload).eq('id', editingItemId));
+    } else {
+      ({ error } = await sb.from('menu_items').insert(payload));
+    }
+
+    document.getElementById('saveItemBtn').disabled = false;
+    if (error) { showToast('Failed to save: ' + error.message); return; }
+
+    showToast(editingItemId ? '✅ Item updated!' : '✅ Item added!');
+    closeMenuModal();
+    loadMenu();
+  }
+
+  async function toggleItemAvail(id, current) {
+    const { error } = await sb.from('menu_items').update({ is_available: !current }).eq('id', id);
+    if (error) { showToast('Failed to update'); return; }
+    await loadMenu();
+  }
+
+  async function deleteMenuItem(id) {
+    if (!confirm('Delete this menu item?')) return;
+    const { error } = await sb.from('menu_items').delete().eq('id', id);
+    if (error) { showToast('Failed to delete'); return; }
+    showToast('Item deleted');
+    loadMenu();
+  }
+
+  // ── ORDERS ──
+  async function loadOrders() {
+    const { data, error } = await sb
+      .from('orders')
+      .select('*, order_items(*), profiles(full_name)')
+      .eq('stall_id', currentStall.id)
+      .order('created_at', { ascending: false });
+
+    if (error) return;
+    allOrders = data || [];
+
+    // Pending badge
+    const pendingCount = allOrders.filter(o => o.status === 'pending').length;
+    const badge = document.getElementById('pendingBadge');
+    badge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+    badge.textContent = pendingCount;
+
+    // Today's stats
+    const today = new Date().toDateString();
+    const todayOrders = allOrders.filter(o => new Date(o.created_at).toDateString() === today && o.status !== 'cancelled');
+    document.getElementById('statOrdersToday').textContent = todayOrders.length;
+    const revenue = todayOrders.filter(o => o.payment_status === 'paid').reduce((sum, o) => sum + (o.total_price || 0), 0);
+    document.getElementById('statRevenue').innerHTML = `<small>Rp</small> ${revenue.toLocaleString('id-ID')}`;
+
+    renderOrders();
+  }
+
+  function setOrderFilter(filter, el) {
+    currentOrderFilter = filter;
+    document.querySelectorAll('.orders-filter .filter-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    renderOrders();
+  }
+
+  function renderOrders() {
+    const filtered = currentOrderFilter === 'all'
+      ? allOrders
+      : allOrders.filter(o => o.status === currentOrderFilter);
+
+    const list = document.getElementById('ordersList');
+    if (filtered.length === 0) {
+      list.innerHTML = `<div class="empty-orders">
+        <div class="empty-orders-icon">📭</div>
+        <div class="empty-orders-title">No orders here</div>
+        <div style="font-size:14px;">Orders will appear here when students place them</div>
+      </div>`;
+      return;
+    }
+
+    list.innerHTML = filtered.map(order => {
+      const itemsList = (order.order_items || []).map(i => `${i.quantity}× ${i.name}`).join(', ');
+      const time = new Date(order.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      const nextStatus = { pending: 'confirmed', confirmed: 'preparing', preparing: 'ready', ready: 'completed' };
+      const nextLabel = { pending: 'Confirm', confirmed: 'Start preparing', preparing: 'Mark ready', ready: 'Complete' };
+
+      return `<div class="order-card">
+        <div class="order-header">
+          <div>
+            <div class="order-id">Order #${order.id.slice(-6).toUpperCase()}</div>
+            <div class="order-time">${time} · ${order.profiles?.full_name || 'Student'}</div>
+          </div>
+          <div class="order-status status-${order.status}">${order.status.charAt(0).toUpperCase() + order.status.slice(1)}</div>
+        </div>
+        <div class="order-items-list">${itemsList || 'No items'}</div>
+        ${order.notes ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">📝 ${order.notes}</div>` : ''}
+        <div class="order-footer">
+          <div>
+            <div class="order-total">Total: <span>Rp ${(order.total_price||0).toLocaleString('id-ID')}</span></div>
+            <div class="order-meta" style="margin-top:6px;">
+              <span class="order-tag">${order.payment_method === 'online' ? '💳 Online' : '💵 Cash'}</span>
+              <span class="order-tag">${order.payment_status === 'paid' ? '✅ Paid' : '⏳ Unpaid'}</span>
+              ${order.is_delivery ? `<span class="order-tag">🚚 Delivery: ${order.delivery_location || '–'}</span>` : '<span class="order-tag">🏃 Pickup</span>'}
+            </div>
+          </div>
+          <div class="order-actions">
+            ${order.status !== 'completed' && order.status !== 'cancelled' && nextStatus[order.status] ? `
+              <button class="btn btn-primary btn-sm" onclick="updateOrderStatus('${order.id}', '${nextStatus[order.status]}')">
+                ${nextLabel[order.status]}
+              </button>` : ''}
+            ${order.status === 'pending' ? `
+              <button class="btn btn-danger btn-sm" onclick="updateOrderStatus('${order.id}', 'cancelled')">Cancel</button>` : ''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function updateOrderStatus(orderId, newStatus) {
+    const { error } = await sb.from('orders').update({ status: newStatus }).eq('id', orderId);
+    if (error) { showToast('Failed to update order'); return; }
+    showToast(`Order ${newStatus}!`);
+    loadOrders();
+  }
+
+  // ── DROPDOWN ──
+  function toggleDropdown() {
+    document.getElementById('profileDropdown').classList.toggle('open');
+  }
+  document.addEventListener('click', e => {
+    const btn = document.getElementById('profileBtn');
+    const dd = document.getElementById('profileDropdown');
+    if (!btn.contains(e.target) && !dd.contains(e.target)) dd.classList.remove('open');
+  });
+
+  // ── LOGOUT ──
+  async function handleLogout() {
+    await sb.auth.signOut();
+    window.location.href = 'kantin_auth.html';
+  }
+
+  // ── TOAST ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  // ── CLOSE MODAL ON OVERLAY CLICK ──
+  document.getElementById('menuModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('menuModal')) closeMenuModal();
+  });
+
+  init();
+</script>
+</body>
+</html>

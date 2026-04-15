@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Kantin UWKS</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #FBF6EE;
+    --orange: #E8834A;
+    --orange-light: #F5C09A;
+    --orange-pale: #FDF0E6;
+    --green: #4A7C5F;
+    --green-light: #A8C5B4;
+    --green-pale: #EDF5F0;
+    --brown: #6B4C3B;
+    --brown-light: #C4A98E;
+    --text: #2C1810;
+    --text-mid: #6B4C3B;
+    --text-muted: #9E7E6E;
+    --border: rgba(107,76,59,0.15);
+    --white: #FFFFFF;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky; top: 0;
+    z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 48px;
+    background: rgba(251,246,238,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo {
+    font-family: 'Fraunces', serif;
+    font-size: 22px; font-weight: 600;
+    color: var(--brown); letter-spacing: -0.5px;
+  }
+  .nav-logo span { color: var(--orange); }
+
+  .btn-nav {
+    background: var(--orange);
+    color: var(--white);
+    padding: 10px 22px;
+    border-radius: 100px;
+    font-size: 14px; font-weight: 500;
+    cursor: pointer;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    text-decoration: none;
+    display: inline-block;
+    transition: background 0.2s;
+  }
+  .btn-nav:hover { background: #d4723d; }
+
+  /* HEADER STRIP */
+  .header-strip {
+    background: var(--brown);
+    padding: 56px 48px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .header-strip::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .header-strip-inner {
+    position: relative; z-index: 1;
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .header-strip h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(32px, 5vw, 56px);
+    font-weight: 600; line-height: 1.05;
+    letter-spacing: -1.5px;
+    color: var(--white);
+  }
+
+  .header-strip h1 em {
+    font-style: italic; font-weight: 300;
+    color: var(--orange-light);
+  }
+
+  .header-strip p {
+    font-size: 15px; font-weight: 300;
+    color: rgba(255,255,255,0.55);
+    margin-top: 10px;
+    max-width: 380px;
+    line-height: 1.6;
+  }
+
+  .header-actions {
+    display: flex; gap: 12px; align-items: center;
+    flex-shrink: 0;
+  }
+
+  .btn-primary {
+    background: var(--orange);
+    color: var(--white);
+    padding: 13px 28px;
+    border-radius: 100px;
+    font-size: 15px; font-weight: 500;
+    text-decoration: none; display: inline-block;
+    font-family: 'DM Sans', sans-serif;
+    transition: background 0.2s;
+    border: none; cursor: pointer;
+  }
+  .btn-primary:hover { background: #d4723d; }
+
+  .btn-outline-white {
+    background: transparent;
+    color: rgba(255,255,255,0.75);
+    padding: 12px 24px;
+    border-radius: 100px;
+    font-size: 14px; font-weight: 400;
+    text-decoration: none; display: inline-block;
+    font-family: 'DM Sans', sans-serif;
+    border: 1.5px solid rgba(255,255,255,0.2);
+    transition: all 0.2s; cursor: pointer;
+  }
+  .btn-outline-white:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.35);
+    color: var(--white);
+  }
+
+  /* QUICK STATS */
+  .quick-stats {
+    display: flex;
+    background: var(--orange);
+  }
+
+  .qs-item {
+    flex: 1;
+    padding: 18px 24px;
+    border-right: 1px solid rgba(255,255,255,0.2);
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .qs-item:last-child { border-right: none; }
+
+  .qs-num {
+    font-family: 'Fraunces', serif;
+    font-size: 22px; font-weight: 600;
+    color: var(--white);
+  }
+  .qs-label {
+    font-size: 12px; font-weight: 300;
+    color: rgba(255,255,255,0.7);
+  }
+
+  /* MAIN LAYOUT */
+  .main {
+    padding: 48px;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 32px;
+    align-items: start;
+  }
+
+  /* STALLS */
+  .section-heading {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .section-heading h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 24px; font-weight: 600;
+    letter-spacing: -0.8px;
+    color: var(--text);
+  }
+
+  .section-heading .count {
+    font-size: 13px; color: var(--text-muted);
+    font-weight: 300;
+  }
+
+  .stalls-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+
+  .stall-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: box-shadow 0.2s, transform 0.15s;
+  }
+  .stall-card:hover {
+    box-shadow: 0 6px 24px rgba(107,76,59,0.1);
+    transform: translateY(-2px);
+  }
+
+  .stall-header {
+    background: var(--orange-pale);
+    padding: 20px;
+    display: flex; align-items: center; gap: 14px;
+  }
+
+  .stall-avatar {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: var(--orange);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .stall-avatar.green { background: var(--green); }
+  .stall-avatar.brown { background: var(--brown); }
+  .stall-avatar.gold { background: #C49A3C; }
+
+  .stall-info-head h3 {
+    font-size: 15px; font-weight: 500;
+    color: var(--text);
+  }
+
+  .stall-info-head p {
+    font-size: 12px; color: var(--text-muted);
+    font-weight: 300;
+    margin-top: 2px;
+  }
+
+  .stall-status {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 500;
+    color: var(--green);
+  }
+  .stall-status.closed { color: var(--text-muted); }
+
+  .stall-status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+  }
+  .stall-status.closed .stall-status-dot { background: var(--text-muted); }
+
+  .stall-body {
+    padding: 16px 20px 20px;
+  }
+
+  .stall-tags {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+
+  .tag {
+    font-size: 11px; font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 100px;
+    background: var(--cream);
+    color: var(--text-mid);
+    border: 1px solid var(--border);
+  }
+
+  .stall-meta {
+    display: flex; gap: 16px;
+  }
+
+  .stall-meta-item {
+    font-size: 12px; color: var(--text-muted);
+    font-weight: 300;
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  /* FOOD ITEMS */
+  .food-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .food-item {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .food-item:hover {
+    border-color: var(--orange-light);
+    background: var(--orange-pale);
+  }
+
+  .food-emoji { font-size: 26px; flex-shrink: 0; }
+
+  .food-details { flex: 1; min-width: 0; }
+
+  .food-name {
+    font-size: 14px; font-weight: 500;
+    color: var(--text);
+  }
+
+  .food-stall {
+    font-size: 12px; color: var(--text-muted);
+    font-weight: 300; margin-top: 2px;
+  }
+
+  .food-price {
+    font-family: 'Fraunces', serif;
+    font-size: 16px; font-weight: 600;
+    color: var(--orange);
+    flex-shrink: 0;
+  }
+
+  .food-add {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--orange);
+    color: var(--white);
+    border: none; cursor: pointer;
+    font-size: 18px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .food-add:hover { background: #d4723d; }
+
+  /* SIDEBAR */
+  .sidebar {}
+
+  .sidebar-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .sidebar-card-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px; font-weight: 500;
+    color: var(--text-mid);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .sidebar-card-body { padding: 16px 20px; }
+
+  /* FILTERS */
+  .filter-group { margin-bottom: 14px; }
+  .filter-label {
+    font-size: 11px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .filter-chips {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+
+  .chip {
+    font-size: 12px; font-weight: 400;
+    padding: 5px 12px;
+    border-radius: 100px;
+    border: 1.5px solid var(--border);
+    background: var(--cream);
+    color: var(--text-mid);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .chip:hover, .chip.active {
+    background: var(--orange-pale);
+    border-color: var(--orange);
+    color: var(--orange);
+  }
+
+  /* SEARCH */
+  .search-wrap {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .search-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--cream);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-input:focus { border-color: var(--orange); background: var(--white); }
+  .search-input::placeholder { color: var(--text-muted); }
+
+  /* STALL OWNER SECTION */
+  .owner-section {
+    background: var(--brown);
+    padding: 56px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .owner-section::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .owner-inner {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; justify-content: space-between; gap: 32px;
+    flex-wrap: wrap;
+  }
+
+  .owner-text h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 32px; font-weight: 600;
+    letter-spacing: -1px; line-height: 1.1;
+    color: var(--white);
+    margin-bottom: 10px;
+  }
+
+  .owner-text p {
+    font-size: 14px; font-weight: 300;
+    color: rgba(255,255,255,0.55);
+    max-width: 420px; line-height: 1.65;
+  }
+
+  .owner-perks {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin-top: 20px;
+  }
+
+  .owner-perk {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; color: rgba(255,255,255,0.7);
+  }
+  .owner-perk::before {
+    content: '';
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--orange-light);
+    flex-shrink: 0;
+  }
+
+  .owner-cta {
+    display: flex; flex-direction: column; gap: 10px;
+    align-items: flex-start;
+  }
+
+  .owner-cta .btn-primary { white-space: nowrap; }
+
+  .owner-note {
+    font-size: 12px; color: rgba(255,255,255,0.4);
+    font-weight: 300;
+    max-width: 220px;
+    line-height: 1.5;
+  }
+
+  /* FOOTER */
+  footer {
+    background: var(--text);
+    padding: 28px 48px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .footer-logo {
+    font-family: 'Fraunces', serif;
+    font-size: 18px; font-weight: 600;
+    color: var(--cream);
+  }
+  .footer-logo span { color: var(--orange); }
+  .footer-copy { font-size: 12px; color: rgba(255,255,255,0.3); }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    nav { padding: 14px 20px; }
+    .header-strip { padding: 40px 20px 36px; }
+    .header-strip-inner { flex-direction: column; align-items: flex-start; }
+    .main { padding: 32px 20px; grid-template-columns: 1fr; }
+    .stalls-grid { grid-template-columns: 1fr; }
+    .quick-stats { flex-wrap: wrap; }
+    .qs-item { min-width: 50%; border-bottom: 1px solid rgba(255,255,255,0.15); }
+    .owner-section { padding: 48px 20px; }
+    .owner-inner { flex-direction: column; }
+    footer { flex-direction: column; gap: 10px; text-align: center; padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Kantin<span>UWKS</span></div>
+  <a href="kantin_login.html" class="btn-nav">Sign in</a>
+</nav>
+
+<!-- HEADER -->
+<div class="header-strip">
+  <div class="header-strip-inner">
+    <div>
+      <h1>Mau Makan Apa<br><em>hari ini?</em></h1>
+      <p>Browse stalls, pick your food, and order — picked up or delivered to your classroom.</p>
+    </div>
+    <div class="header-actions">
+      <a href="kantin_login.html" class="btn-primary">Order now</a>
+      <a href="#stalls" class="btn-outline-white">Browse stalls</a>
+    </div>
+  </div>
+</div>
+
+
+<!-- MAIN -->
+<div class="main">
+  <div class="left-col">
+
+    <!-- STALLS -->
+    <div id="stalls">
+      <div class="section-heading">
+        <h2>Stalls</h2>
+        <span class="count">18 open now</span>
+      </div>
+      <div class="stalls-grid">
+
+        <div class="stall-card">
+          <div class="stall-header">
+            <div class="stall-avatar">🍛</div>
+            <div class="stall-info-head">
+              <h3>Warung Ibu Sari</h3>
+              <p>Nasi campur, lauk pauk</p>
+            </div>
+            <div class="stall-status">
+              <div class="stall-status-dot"></div>
+              Open
+            </div>
+          </div>
+          <div class="stall-body">
+            <div class="stall-tags">
+              <span class="tag">Indonesian</span>
+              <span class="tag">Rice</span>
+              <span class="tag">Delivery</span>
+            </div>
+            <div class="stall-meta">
+              <div class="stall-meta-item">⏱ ~8 min</div>
+              <div class="stall-meta-item">🕐 07:00–15:00</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stall-card">
+          <div class="stall-header">
+            <div class="stall-avatar green">🍜</div>
+            <div class="stall-info-head">
+              <h3>Mie & Bakso Pak Dedi</h3>
+              <p>Mie ayam, bakso kuah</p>
+            </div>
+            <div class="stall-status">
+              <div class="stall-status-dot"></div>
+              Open
+            </div>
+          </div>
+          <div class="stall-body">
+            <div class="stall-tags">
+              <span class="tag">Noodles</span>
+              <span class="tag">Soup</span>
+            </div>
+            <div class="stall-meta">
+              <div class="stall-meta-item">⏱ ~12 min</div>
+              <div class="stall-meta-item">🕐 08:00–16:00</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stall-card">
+          <div class="stall-header">
+            <div class="stall-avatar brown">🧋</div>
+            <div class="stall-info-head">
+              <h3>Minuman Segar</h3>
+              <p>Boba, es buah, jus</p>
+            </div>
+            <div class="stall-status">
+              <div class="stall-status-dot"></div>
+              Open
+            </div>
+          </div>
+          <div class="stall-body">
+            <div class="stall-tags">
+              <span class="tag">Drinks</span>
+              <span class="tag">Boba</span>
+              <span class="tag">Delivery</span>
+            </div>
+            <div class="stall-meta">
+              <div class="stall-meta-item">⏱ ~5 min</div>
+              <div class="stall-meta-item">🕐 09:00–17:00</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stall-card">
+          <div class="stall-header">
+            <div class="stall-avatar gold">🍞</div>
+            <div class="stall-info-head">
+              <h3>Snack & Roti Bu Ani</h3>
+              <p>Gorengan, roti bakar, kue</p>
+            </div>
+            <div class="stall-status closed">
+              <div class="stall-status-dot"></div>
+              Closed
+            </div>
+          </div>
+          <div class="stall-body">
+            <div class="stall-tags">
+              <span class="tag">Snacks</span>
+              <span class="tag">Bakery</span>
+            </div>
+            <div class="stall-meta">
+              <div class="stall-meta-item">⏱ —</div>
+              <div class="stall-meta-item">🕐 07:00–12:00</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- POPULAR FOOD -->
+    <div>
+      <div class="section-heading">
+        <h2>Popular right now</h2>
+        <span class="count">Today's top picks</span>
+      </div>
+      <div class="food-list">
+        <div class="food-item">
+          <div class="food-emoji">🍱</div>
+          <div class="food-details">
+            <div class="food-name">Nasi Padang Special</div>
+            <div class="food-stall">Warung Ibu Sari · ~8 min</div>
+          </div>
+          <div class="food-price">Rp 18.000</div>
+          <button class="food-add" onclick="window.location='kantin_login.html'">+</button>
+        </div>
+        <div class="food-item">
+          <div class="food-emoji">🍜</div>
+          <div class="food-details">
+            <div class="food-name">Mie Goreng Spesial</div>
+            <div class="food-stall">Mie & Bakso Pak Dedi · ~12 min</div>
+          </div>
+          <div class="food-price">Rp 15.000</div>
+          <button class="food-add" onclick="window.location='kantin_login.html'">+</button>
+        </div>
+        <div class="food-item">
+          <div class="food-emoji">🧋</div>
+          <div class="food-details">
+            <div class="food-name">Brown Sugar Boba</div>
+            <div class="food-stall">Minuman Segar · ~5 min</div>
+          </div>
+          <div class="food-price">Rp 12.000</div>
+          <button class="food-add" onclick="window.location='kantin_login.html'">+</button>
+        </div>
+        <div class="food-item">
+          <div class="food-emoji">🍛</div>
+          <div class="food-details">
+            <div class="food-name">Ayam Bakar + Nasi</div>
+            <div class="food-stall">Warung Ibu Sari · ~10 min</div>
+          </div>
+          <div class="food-price">Rp 22.000</div>
+          <button class="food-add" onclick="window.location='kantin_login.html'">+</button>
+        </div>
+        <div class="food-item">
+          <div class="food-emoji">🥤</div>
+          <div class="food-details">
+            <div class="food-name">Es Buah Segar</div>
+            <div class="food-stall">Minuman Segar · ~5 min</div>
+          </div>
+          <div class="food-price">Rp 8.000</div>
+          <button class="food-add" onclick="window.location='kantin_login.html'">+</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <div class="sidebar-card">
+      <div class="search-wrap">
+        <input class="search-input" type="text" placeholder="Search food or stall…" />
+      </div>
+      <div class="sidebar-card-body">
+        <div class="filter-group">
+          <div class="filter-label">Category</div>
+          <div class="filter-chips">
+            <div class="chip active">All</div>
+            <div class="chip">Rice</div>
+            <div class="chip">Noodles</div>
+            <div class="chip">Drinks</div>
+            <div class="chip">Snacks</div>
+            <div class="chip">Soup</div>
+          </div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">Options</div>
+          <div class="filter-chips">
+            <div class="chip">Open now</div>
+            <div class="chip">Delivery</div>
+            <div class="chip">Under Rp 15k</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-card">
+      <div class="sidebar-card-header">
+        How ordering works
+      </div>
+      <div class="sidebar-card-body">
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <div style="width:28px; height:28px; border-radius:8px; background:var(--orange-pale); display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0;">🔍</div>
+            <div>
+              <div style="font-size:13px; font-weight:500; color:var(--text);">Browse & pick</div>
+              <div style="font-size:12px; color:var(--text-muted); font-weight:300; margin-top:2px;">Choose from any open stall</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <div style="width:28px; height:28px; border-radius:8px; background:var(--orange-pale); display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0;">🛒</div>
+            <div>
+              <div style="font-size:13px; font-weight:500; color:var(--text);">Checkout</div>
+              <div style="font-size:12px; color:var(--text-muted); font-weight:300; margin-top:2px;">Pickup or classroom delivery via QRIS / cash</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <div style="width:28px; height:28px; border-radius:8px; background:var(--orange-pale); display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0;">📍</div>
+            <div>
+              <div style="font-size:13px; font-weight:500; color:var(--text);">Track live</div>
+              <div style="font-size:12px; color:var(--text-muted); font-weight:300; margin-top:2px;">Real-time status updates</div>
+            </div>
+          </div>
+        </div>
+        <a href="kantin_login.html" class="btn-primary" style="margin-top:20px; display:block; text-align:center;">Sign in to order</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- STALL OWNER SECTION -->
+<div class="owner-section">
+  <div class="owner-inner">
+    <div class="owner-text">
+      <h2>Own a stall at<br>the canteen?</h2>
+      <p>Register your stall, manage your menu, and receive orders digitally. Your account will go live after a quick admin review.</p>
+      <div class="owner-perks">
+        <div class="owner-perk">Digital order management</div>
+        <div class="owner-perk">Live notifications</div>
+        <div class="owner-perk">Menu control</div>
+        <div class="owner-perk">Earnings summary</div>
+      </div>
+    </div>
+    <div class="owner-cta">
+      <a href="kantin_login.html?tab=signup&role=seller" class="btn-primary">Register your stall →</a>
+      <p class="owner-note">Accounts are reviewed by admin. You'll be notified by email once approved.</p>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">Kantin<span>.</span></div>
+  <div class="footer-copy">© 2025 Kantin. Campus canteen ordering system.</div>
+</footer>
+
+<script>
+  // Filter chip toggle
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', function() {
+      // Only toggle within the same .filter-chips group for category
+      const group = this.closest('.filter-chips');
+      const siblings = group.querySelectorAll('.chip');
+      // If it's the category group (has "All"), do single-select
+      const hasAll = Array.from(siblings).some(c => c.textContent === 'All');
+      if (hasAll) {
+        siblings.forEach(c => c.classList.remove('active'));
+        this.classList.add('active');
+      } else {
+        this.classList.toggle('active');
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
